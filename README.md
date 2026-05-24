@@ -108,6 +108,15 @@ Environment variables in all string values (`$VAR` / `${VAR}`) are resolved auto
 
 `GET` requests are sent without a body. `headers` are spread after the `Content-Type` header.
 
+### Global options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | `true` | Start with notifications enabled |
+| `includeSubagents` | boolean | `false` | Also send notifications for subagent sessions |
+
+Subagents (child sessions spawned by the main agent) are excluded by default. Set `"includeSubagents": true` to receive notifications for those too.
+
 ## Available events
 
 | Event | When it fires |

@@ -290,3 +290,34 @@ test('enabled defaults to undefined when not set', () => {
   expect(config).not.toBeNull();
   expect(config!.enabled).toBeUndefined();
 });
+
+test('reads includeSubagents from config', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      includeSubagents: true,
+      webhooks: [{ url: 'https://example.com', events: ['session.idle'] }],
+    })
+  );
+
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.includeSubagents).toBe(true);
+});
+
+test('includeSubagents defaults to undefined when not set', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://example.com', events: ['session.idle'] }],
+    })
+  );
+
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.includeSubagents).toBeUndefined();
+});

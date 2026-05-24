@@ -4,7 +4,7 @@ import { loadConfig } from './config';
 import { sendWebhook } from './send';
 
 let webhooksEnabled = true;
-const sessionTitleCache = new Map<string, string>();
+const sessionInfoCache = new Map<string, { title?: string; isSubagent?: boolean }>();
 
 export const WebhookNotify: Plugin = async ({ project, client, directory, worktree }) => {
   const config = loadConfig();
@@ -99,22 +99,29 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
       const msg = messages[event.type] ?? `Event: ${event.type}`;
       const emote = emotes[event.type] ?? '';
 
-      // Fetch session title (cached per session ID)
+      // Fetch session info (cached per session ID) — title + subagent check
       const sessionID = (event.properties as Record<string, unknown> | undefined)?.sessionID as
         | string
         | undefined;
       let sessionTitle: string | undefined;
       if (sessionID) {
-        sessionTitle = sessionTitleCache.get(sessionID);
-        if (!sessionTitle && !sessionTitleCache.has(sessionID)) {
+        let info = sessionInfoCache.get(sessionID);
+        if (!info) {
           try {
             const result = await client.session.get({ path: { id: sessionID } });
-            sessionTitle = (result.data as { title?: string } | undefined)?.title;
+            const data = result.data as { title?: string; parentID?: string } | undefined;
+            info = {
+              title: data?.title,
+              isSubagent: !!data?.parentID,
+            };
           } catch {
-            // non-fatal: session might not exist or be inaccessible
+            info = {};
           }
-          sessionTitleCache.set(sessionID, sessionTitle ?? '');
+          sessionInfoCache.set(sessionID, info);
         }
+        sessionTitle = info.title;
+        // Skip subagent events unless configured otherwise
+        if (info.isSubagent && config.includeSubagents !== true) return;
       }
 
       await Promise.allSettled(
