@@ -11,11 +11,22 @@ export interface Config {
   webhooks: WebhookConfig[]
 }
 
-function resolveEnvVars(value: string): string {
-  return value.replace(/\$\{?(\w+)\}?/g, (match, name) => {
-    const resolved = process.env[name]
-    return resolved !== undefined ? resolved : match
-  })
+function resolveEnvVarsInValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value.replace(/\$\{?(\w+)\}?/g, (match, name) => {
+      const resolved = process.env[name]
+      return resolved !== undefined ? resolved : match
+    })
+  }
+  if (Array.isArray(value)) return value.map(resolveEnvVarsInValue)
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = resolveEnvVarsInValue(v)
+    }
+    return result
+  }
+  return value
 }
 
 export function loadConfig(cwd?: string, home?: string): Config | null {
@@ -30,23 +41,23 @@ export function loadConfig(cwd?: string, home?: string): Config | null {
     if (!existsSync(p)) continue
     try {
       const raw = readFileSync(p, "utf-8")
-      const resolved = resolveEnvVars(raw)
-      const parsed = JSON.parse(resolved)
-      if (!parsed.webhooks || !Array.isArray(parsed.webhooks)) {
+      const parsed = JSON.parse(raw)
+      const resolved = resolveEnvVarsInValue(parsed) as Config
+      if (!resolved.webhooks || !Array.isArray(resolved.webhooks)) {
         console.error("[webhook-notify] config.webhooks must be an array")
         return null
       }
-      for (const w of parsed.webhooks) {
+      for (const w of resolved.webhooks) {
         if (!w.url || typeof w.url !== "string") {
           console.error("[webhook-notify] each webhook must have a string 'url'")
           return null
         }
-        if (!w.events || !Array.isArray(w.events)) {
-          console.error("[webhook-notify] each webhook must have an 'events' array")
+        if (!w.events || !Array.isArray(w.events) || w.events.length === 0) {
+          console.error("[webhook-notify] each webhook must have a non-empty 'events' array")
           return null
         }
       }
-      return parsed
+      return resolved
     } catch (err) {
       console.error("[webhook-notify] failed to parse config:", err)
       return null

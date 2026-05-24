@@ -101,7 +101,34 @@ test("resolves ${VAR_NAME} env vars", () => {
   }
 })
 
-test("validates empty webhooks array is valid", () => {
+test("resolves env var containing double quotes in url", () => {
+  process.env.MSG = 'say "hello"'
+  try {
+    const projectDir = join(tmpDir, ".opencode")
+    mkdirSync(projectDir, { recursive: true })
+    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
+      webhooks: [{ url: "$MSG", events: ["session.idle"] }],
+    }))
+
+    const config = loadConfig(tmpDir)
+    expect(config).not.toBeNull()
+    expect(config!.webhooks[0].url).toBe('say "hello"')
+  } finally {
+    delete process.env.MSG
+  }
+})
+
+test("rejects webhook with empty events array", () => {
+  const projectDir = join(tmpDir, ".opencode")
+  mkdirSync(projectDir, { recursive: true })
+  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
+    webhooks: [{ url: "https://example.com", events: [] }],
+  }))
+
+  expect(loadConfig(tmpDir)).toBeNull()
+})
+
+test("validates empty top-level webhooks array is valid", () => {
   const projectDir = join(tmpDir, ".opencode")
   mkdirSync(projectDir, { recursive: true })
   writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({ webhooks: [] }))
