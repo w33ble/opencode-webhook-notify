@@ -12,6 +12,7 @@ export interface WebhookConfig {
 
 export interface Config {
   webhooks: WebhookConfig[]
+  enabled?: boolean
 }
 
 function resolveEnvVarsInValue(value: unknown): unknown {

@@ -11,6 +11,8 @@ Create a `webhook-notify.json` config file. Project-level takes priority over gl
 
 No config = plugin loads silently and does nothing.
 
+Set `"enabled": false` at the top level to temporarily disable all notifications without removing the config file.
+
 ### Format
 
 ```json

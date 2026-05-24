@@ -5,7 +5,7 @@ import { basename } from "node:path"
 
 export const WebhookNotify: Plugin = async ({ project, client, directory, worktree }) => {
   const config = loadConfig()
-  if (!config) return {}
+  if (!config || config.enabled === false) return {}
 
   const allEvents = [...new Set(config.webhooks.flatMap(w => w.events))]
 
