@@ -206,3 +206,15 @@ test("returns null when webhook missing events", () => {
 
   expect(loadConfig(tmpDir)).toBeNull()
 })
+
+test("reads raw flag from config", () => {
+  const projectDir = join(tmpDir, ".opencode")
+  mkdirSync(projectDir, { recursive: true })
+  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
+    webhooks: [{ url: "https://example.com", events: ["session.idle"], raw: true }],
+  }))
+
+  const config = loadConfig(tmpDir, tmpDir)
+  expect(config).not.toBeNull()
+  expect(config!.webhooks[0].raw).toBe(true)
+})

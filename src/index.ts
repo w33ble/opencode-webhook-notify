@@ -13,6 +13,35 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
     `[webhook-notify] Loaded ${config.webhooks.length} webhook(s) watching ${allEvents.length} event(s)`,
   )
 
+  const emotes: Record<string, string> = {
+    "session.idle": "⏳",
+    "session.error": "❌",
+    "session.created": "🆕",
+    "session.deleted": "🗑️",
+    "session.compacted": "📦",
+    "session.diff": "📄",
+    "session.status": "📊",
+    "session.updated": "🔄",
+    "permission.asked": "🔐",
+    "permission.replied": "✅",
+    "todo.updated": "📋",
+    "question.asked": "❓",
+    "question.replied": "💬",
+    "question.rejected": "🚫",
+    "message.updated": "💬",
+    "message.part.updated": "📝",
+    "command.executed": "⚡",
+    "file.edited": "✏️",
+    "file.watcher.updated": "👀",
+    "server.connected": "🔌",
+    "installation.updated": "📥",
+    "lsp.client.diagnostics": "🔍",
+    "lsp.updated": "🔧",
+    "tui.prompt.append": "⌨️",
+    "tui.command.execute": "🖥️",
+    "tui.toast.show": "🔔",
+  }
+
   const messages: Record<string, string> = {
     "session.idle": "Session is idle and waiting for input",
     "session.error": "Session encountered an error",
@@ -63,18 +92,24 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
       if (matching.length === 0) return
 
       const msg = messages[event.type] ?? `Event: ${event.type}`
-      const payload = {
-        event: event.type,
-        timestamp: new Date().toISOString(),
-        project: projectId,
-        projectName,
-        directory,
-        worktree,
-        msg,
-      }
+      const emote = emotes[event.type] ?? "ℹ️"
 
       await Promise.allSettled(
-        matching.map(w => sendWebhook(w.url, payload, undefined, w.headers, w.method ?? "POST")),
+        matching.map(w => {
+          const payload = w.raw
+            ? {
+                event: event.type,
+                timestamp: new Date().toISOString(),
+                project: projectId,
+                projectName,
+                directory,
+                worktree,
+                msg,
+              }
+            : `${emote} ${msg}\n${projectName} | ${worktree}\n${event.type}`
+
+          return sendWebhook(w.url, payload, undefined, w.headers, w.method ?? "POST")
+        }),
       )
     },
   }

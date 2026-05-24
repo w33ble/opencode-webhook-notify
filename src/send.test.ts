@@ -53,3 +53,13 @@ test("logs error on non-2xx response", async () => {
   // Should not throw
   await sendWebhook("https://example.com", { event: "test" }, fetchMock)
 })
+
+test("sends text/plain when payload is a string", async () => {
+  const fetchMock = mock((url: string, init: RequestInit) => {
+    expect(init.headers).toEqual({ "Content-Type": "text/plain" })
+    expect(init.body).toBe("hello world")
+    return Promise.resolve(new Response(null, { status: 200 }))
+  })
+
+  await sendWebhook("https://example.com", "hello world", fetchMock)
+})
