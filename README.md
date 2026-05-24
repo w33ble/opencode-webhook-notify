@@ -1,4 +1,4 @@
-# webhook-notify
+# opencode-webhook-notify
 
 An [OpenCode](https://opencode.ai) plugin that sends webhook notifications when notable events occur — agent needs your input, finishes working, hits an error, or updates todos.
 
