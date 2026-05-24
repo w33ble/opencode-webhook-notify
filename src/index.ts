@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 import { loadConfig } from "./config"
 import { sendWebhook } from "./send"
 
-export const WebhookNotify: Plugin = async ({ project, client }) => {
+export const WebhookNotify: Plugin = async ({ project, client, directory, worktree }) => {
   const config = loadConfig()
   if (!config) return {}
 
@@ -42,6 +42,7 @@ export const WebhookNotify: Plugin = async ({ project, client }) => {
   }
 
   const projectId = project.id
+  const projectName = project.name
 
   try {
     await client.app.log({
@@ -65,6 +66,9 @@ export const WebhookNotify: Plugin = async ({ project, client }) => {
         event: event.type,
         timestamp: new Date().toISOString(),
         project: projectId,
+        projectName,
+        directory,
+        worktree,
         msg,
       }
 
