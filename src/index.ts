@@ -12,6 +12,32 @@ export const WebhookNotify: Plugin = async ({ project, client }) => {
     `[webhook-notify] Loaded ${config.webhooks.length} webhook(s) watching ${allEvents.length} event(s)`,
   )
 
+  const messages: Record<string, string> = {
+    "session.idle": "Session is idle and waiting for input",
+    "session.error": "Session encountered an error",
+    "session.created": "New session created",
+    "session.deleted": "Session deleted",
+    "session.compacted": "Session context compacted",
+    "session.diff": "Session diff available",
+    "session.status": "Session status changed",
+    "session.updated": "Session updated",
+    "permission.asked": "Agent needs your permission to continue",
+    "permission.replied": "Permission request answered",
+    "todo.updated": "Task list updated",
+    "message.updated": "New message received",
+    "message.part.updated": "Message content updated",
+    "command.executed": "Command executed",
+    "file.edited": "File edited",
+    "file.watcher.updated": "File watcher triggered",
+    "server.connected": "Server connected",
+    "installation.updated": "Installation updated",
+    "lsp.client.diagnostics": "LSP diagnostics available",
+    "lsp.updated": "LSP updated",
+    "tui.prompt.append": "TUI prompt updated",
+    "tui.command.execute": "TUI command executed",
+    "tui.toast.show": "TUI toast notification",
+  }
+
   const projectId = project.id
 
   try {
@@ -31,10 +57,12 @@ export const WebhookNotify: Plugin = async ({ project, client }) => {
       const matching = config.webhooks.filter(w => w.events.includes(event.type))
       if (matching.length === 0) return
 
+      const msg = messages[event.type] ?? `Event: ${event.type}`
       const payload = {
         event: event.type,
         timestamp: new Date().toISOString(),
         project: projectId,
+        msg,
       }
 
       await Promise.allSettled(
