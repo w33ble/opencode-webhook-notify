@@ -13,6 +13,15 @@ No config = plugin loads silently and does nothing.
 
 Set `"enabled": false` at the top level to temporarily disable all notifications without removing the config file.
 
+Or toggle notifications at runtime without restarting — just ask your agent:
+
+> "Disable webhook notifications"
+
+The plugin registers two custom tools:
+
+- `webhook_notify_toggle` — toggle notifications on/off (`enable: true | false`)
+- `webhook_notify_status` — check current state
+
 ### Format
 
 ```json

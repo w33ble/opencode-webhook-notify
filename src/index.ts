@@ -1,11 +1,18 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import { type Plugin, tool } from "@opencode-ai/plugin"
 import { loadConfig } from "./config"
 import { sendWebhook } from "./send"
 import { basename } from "node:path"
 
+let webhooksEnabled = true
+
 export const WebhookNotify: Plugin = async ({ project, client, directory, worktree }) => {
   const config = loadConfig()
-  if (!config || config.enabled === false) return {}
+  if (!config) return {}
+
+  if (config.enabled === false) {
+    webhooksEnabled = false
+    console.log("[webhook-notify] Loaded with notifications disabled via config")
+  }
 
   const allEvents = [...new Set(config.webhooks.flatMap(w => w.events))]
 
@@ -88,6 +95,8 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
 
   return {
     event: async ({ event }) => {
+      if (!webhooksEnabled) return
+
       const matching = config.webhooks.filter(w => w.events.includes(event.type))
       if (matching.length === 0) return
 
@@ -111,6 +120,29 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
           return sendWebhook(w.url, payload, undefined, w.headers, w.method ?? "POST")
         }),
       )
+    },
+    tool: {
+      webhook_notify_toggle: tool({
+        description: "Toggle webhook notifications on or off without restarting OpenCode",
+        args: {
+          enable: tool.schema.boolean().describe("Set to true to enable notifications, false to disable"),
+        },
+        async execute(args) {
+          webhooksEnabled = args.enable
+          const status = webhooksEnabled ? "enabled" : "disabled"
+          console.log(`[webhook-notify] Notifications ${status}`)
+          return `Webhook notifications ${status}`
+        },
+      }),
+      webhook_notify_status: tool({
+        description: "Check whether webhook notifications are currently enabled",
+        args: {},
+        async execute() {
+          return webhooksEnabled
+            ? "Webhook notifications are enabled"
+            : "Webhook notifications are disabled"
+        },
+      }),
     },
   }
 }
