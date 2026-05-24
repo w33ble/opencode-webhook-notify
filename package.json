@@ -1,11 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@w33ble/opencode-webhook-notify",
-  "private": true,
+  "version": "1.0.0",
   "type": "module",
   "engines": {
     "bun": ">=1.0.0"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "bun run build:bundle && bun run build:types",
     "build:bundle": "bun build src/index.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin",
