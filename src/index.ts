@@ -1,6 +1,7 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { loadConfig } from "./config"
 import { sendWebhook } from "./send"
+import { basename } from "node:path"
 
 export const WebhookNotify: Plugin = async ({ project, client, directory, worktree }) => {
   const config = loadConfig()
@@ -42,7 +43,7 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
   }
 
   const projectId = project.id
-  const projectName = project.name
+  const projectName = project.name ?? basename(directory)
 
   try {
     await client.app.log({
