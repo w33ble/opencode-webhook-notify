@@ -11,14 +11,9 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
 
   if (config.enabled === false) {
     webhooksEnabled = false
-    console.log("[webhook-notify] Loaded with notifications disabled via config")
   }
 
   const allEvents = [...new Set(config.webhooks.flatMap(w => w.events))]
-
-  console.log(
-    `[webhook-notify] Loaded ${config.webhooks.length} webhook(s) watching ${allEvents.length} event(s)`,
-  )
 
   const emotes: Record<string, string> = {
     "session.idle": "⏳",
@@ -130,7 +125,6 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
         async execute(args) {
           webhooksEnabled = args.enable
           const status = webhooksEnabled ? "enabled" : "disabled"
-          console.log(`[webhook-notify] Notifications ${status}`)
           return `Webhook notifications ${status}`
         },
       }),
