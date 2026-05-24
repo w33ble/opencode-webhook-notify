@@ -45,7 +45,7 @@ test("falls back to global config when project config missing", () => {
     webhooks: [{ url: "https://global.example.com", events: ["session.idle"] }],
   }))
 
-  const config = loadConfig(tmpDir)
+  const config = loadConfig(tmpDir, tmpDir)
   expect(config).not.toBeNull()
   expect(config!.webhooks[0].url).toBe("https://global.example.com")
 })
@@ -62,7 +62,7 @@ test("project config takes priority over global", () => {
     webhooks: [{ url: "https://project.example.com", events: ["todo.updated"] }],
   }))
 
-  const config = loadConfig(tmpDir)
+  const config = loadConfig(tmpDir, tmpDir)
   expect(config).not.toBeNull()
   expect(config!.webhooks[0].url).toBe("https://project.example.com")
 })

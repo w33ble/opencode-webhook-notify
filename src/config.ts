@@ -18,12 +18,12 @@ function resolveEnvVars(value: string): string {
   })
 }
 
-export function loadConfig(cwd?: string): Config | null {
+export function loadConfig(cwd?: string, home?: string): Config | null {
   const projectPath = cwd ?? process.cwd()
+  const homeDir = home ?? homedir()
   const paths = [
     join(projectPath, ".opencode", "webhook-notify.json"),
-    join(projectPath, ".config", "opencode", "webhook-notify.json"),
-    join(homedir(), ".config", "opencode", "webhook-notify.json"),
+    join(homeDir, ".config", "opencode", "webhook-notify.json"),
   ]
 
   for (const p of paths) {
