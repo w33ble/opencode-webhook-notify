@@ -12,13 +12,19 @@ export const WebhookNotify: Plugin = async ({ project, client }) => {
     `[webhook-notify] Loaded ${config.webhooks.length} webhook(s) watching ${allEvents.length} event(s)`,
   )
 
-  await client.app.log({
-    body: {
-      service: "webhook-notify",
-      level: "info",
-      message: `Loaded ${config.webhooks.length} webhook(s), ${allEvents.length} event(s)`,
-    },
-  })
+  const projectId = project.id
+
+  try {
+    await client.app.log({
+      body: {
+        service: "webhook-notify",
+        level: "info",
+        message: `Loaded ${config.webhooks.length} webhook(s), ${allEvents.length} event(s)`,
+      },
+    })
+  } catch {
+    // log failure is non-fatal; plugin still works
+  }
 
   return {
     event: async ({ event }) => {
@@ -28,7 +34,7 @@ export const WebhookNotify: Plugin = async ({ project, client }) => {
       const payload = {
         event: event.type,
         timestamp: new Date().toISOString(),
-        project: project?.id ?? process.cwd(),
+        project: projectId,
       }
 
       await Promise.allSettled(
