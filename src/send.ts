@@ -3,15 +3,16 @@ export async function sendWebhook(
   payload: Record<string, unknown>,
   _fetch: typeof fetch = globalThis.fetch.bind(globalThis),
   headers?: Record<string, string>,
+  method: string = "POST",
 ): Promise<void> {
   try {
     const response = await _fetch(url, {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json", ...headers },
-      body: JSON.stringify(payload),
+      body: method === "GET" ? undefined : JSON.stringify(payload),
     })
     if (!response.ok) {
-      console.error(`[webhook-notify] POST ${url} → ${response.status} ${response.statusText}`)
+      console.error(`[webhook-notify] ${method} ${url} → ${response.status} ${response.statusText}`)
     }
   } catch (err) {
     console.error("[webhook-notify] webhook send failed:", err)

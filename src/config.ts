@@ -6,6 +6,7 @@ export interface WebhookConfig {
   url: string
   events: string[]
   headers?: Record<string, string>
+  method?: string  // default POST
 }
 
 export interface Config {

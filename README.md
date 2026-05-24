@@ -44,6 +44,22 @@ Custom headers (e.g. for API keys or bearer tokens) can be set per webhook:
 }
 ```
 
+The HTTP method defaults to `POST`. Set a custom `method` for GET, PUT, PATCH, etc.:
+
+```json
+{
+  "webhooks": [
+    {
+      "url": "https://api.example.com/check",
+      "events": ["session.idle"],
+      "method": "GET"
+    }
+  ]
+}
+```
+
+`method` defaults to POST. Set to GET, PUT, PATCH, etc. as needed. GET requests are sent without a body.
+
 Environment variables in string values are resolved automatically:
 
 ```json

@@ -38,7 +38,7 @@ export const WebhookNotify: Plugin = async ({ project, client }) => {
       }
 
       await Promise.allSettled(
-        matching.map(w => sendWebhook(w.url, payload, undefined, w.headers)),
+        matching.map(w => sendWebhook(w.url, payload, undefined, w.headers, w.method ?? "POST")),
       )
     },
   }
