@@ -175,6 +175,33 @@ export const MyPlugin: Plugin = async () => {
 | `"experimental.session.compacting"` | Inject compaction context |
 | `config` | Modify config at startup |
 
+### Events Deep Dive
+
+The `event` hook receives `{ event }` where `event` has a `.type` string and optional `.properties`:
+
+```ts
+event: async ({ event }) => {
+  console.log(event.type)                          // "session.idle"
+  console.log(event.properties?.sessionID)          // session UUID
+  console.log(event.properties?.status?.type)       // "idle" | "busy" (for session.status)
+}
+```
+
+### Event hierarchy
+
+Not all "agent waiting" events are the same:
+
+| Event | Fires when |
+|-------|-----------|
+| `session.idle` | Agent stops and waits (all cases — questions, finished, etc.) |
+| `session.status` | Session state changes. `properties.status.type`: `"idle"`, `"busy"`, `"retrying"` |
+| `permission.asked` | Tool permission dialog only (bash, file edits, etc.) — **not** the question tool |
+| `question.asked` | Agent calls the question tool specifically. Also `question.replied` / `question.rejected` |
+
+### Undocumented events
+
+The [official docs](https://opencode.ai/docs/plugins/) list most events, but some (like `question.asked`, `question.replied`, `question.rejected`) are only in the [OpenCode source](https://github.com/anomalyco/opencode). Check `packages/opencode/src/cli/cmd/run/stream.transport.ts` when you need specific events.
+
 Full event list:  session.* ,  message.* ,  file.* ,  permission.* ,  lsp.* ,  command.* ,
   tui.* ,  installation.* ,  server.* ,  shell.env ,  todo.updated
 
@@ -218,10 +245,6 @@ import { type Plugin, tool } from "@opencode-ai/plugin"  // ⚠️ ~0.5 MB unles
 ```
 
 When you import values (like `tool`), always add `--external @opencode-ai/plugin` to your build script. OpenCode provides it at runtime. Type-only imports don't need this since they're erased.
-
-### Undocumented events exist — check the source
-
-The [docs](https://opencode.ai/docs/plugins/) list official events, but the OpenCode source has more. For example, `question.asked`, `question.replied`, and `question.rejected` fire when the question tool is used — they're not in the docs but are in `packages/opencode/src/cli/cmd/run/stream.transport.ts`. Searching the [OpenCode repo](https://github.com/anomalyco/opencode) is worthwhile when you need specific events.
 
 ### console.log flashes at startup, client.app.log doesn't
 
@@ -271,25 +294,6 @@ The `project` context field may not have a `name`. `project.id` is always a UUID
 ```ts
 import { basename } from "node:path"
 const name = project.name ?? basename(directory)
-```
-
-### session.idle vs permission.asked vs question.asked
-
-| Event | Fires when |
-|-------|-----------|
-| `session.idle` | Agent stops and waits (all cases — questions, finished, etc.) |
-| `session.status` | Carries `properties.status.type`: `"idle"`, `"busy"`, `"retrying"` |
-| `permission.asked` | Tool permission dialogs only (not question tool) |
-| `question.asked` | Agent calls the question tool specifically |
-
-### event hook receives { event } with .type and .properties
-
-```ts
-event: async ({ event }) => {
-  console.log(event.type)                          // "session.idle"
-  console.log(event.properties?.sessionID)          // session UUID
-  console.log(event.properties?.status?.type)       // "idle" | "busy" (for session.status)
-}
 ```
 
 ### env var resolution: parse JSON first, then resolve
