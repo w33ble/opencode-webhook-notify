@@ -22,69 +22,85 @@ No config = plugin loads silently and does nothing.
     },
     {
       "url": "https://ntfy.sh/mytopic",
-      "events": ["permission.asked", "todo.updated"]
+      "events": ["permission.asked", "question.asked", "todo.updated"]
     }
   ]
 }
 ```
 
-Custom headers (e.g. for API keys or bearer tokens) can be set per webhook:
+### Webhook options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `url` | string | required | Webhook endpoint URL |
+| `events` | string[] | required | Which event types trigger this webhook |
+| `headers` | object | — | Custom HTTP headers (e.g. auth tokens) |
+| `method` | string | `"POST"` | HTTP method (`GET`, `PUT`, `PATCH`, etc.) |
+| `raw` | boolean | `false` | Send structured JSON instead of formatted text |
+
+**Headers** support env vars and are spread after `Content-Type`:
 
 ```json
 {
-  "webhooks": [
-    {
-      "url": "https://api.example.com/hooks",
-      "events": ["session.idle"],
-      "headers": {
-        "Authorization": "Bearer ${API_TOKEN}"
-      }
-    }
-  ]
+  "url": "https://api.example.com/hooks",
+  "events": ["session.idle"],
+  "headers": {
+    "Authorization": "Bearer ${API_TOKEN}"
+  }
 }
 ```
 
-The HTTP method defaults to `POST`. Set a custom `method` for GET, PUT, PATCH, etc.:
+**Method** defaults to `POST`. `GET` requests are sent without a body.
 
-```json
-{
-  "webhooks": [
-    {
-      "url": "https://api.example.com/check",
-      "events": ["session.idle"],
-      "method": "GET"
-    }
-  ]
-}
-```
+**Raw mode:** When `"raw": true`, a full JSON payload is sent (see below). By default, a human-readable text message is sent instead.
 
-`method` defaults to POST. Set to GET, PUT, PATCH, etc. as needed. GET requests are sent without a body.
-
-Environment variables in string values are resolved automatically:
-
-```json
-{ "url": "https://ntfy.sh/${NTFY_TOPIC}" }
-```
+Environment variables in all string values (`$VAR` / `${VAR}`) are resolved automatically.
 
 ### Available events
 
 | Event | When it fires |
 |-------|--------------|
-| `session.idle` | Agent finished a response, waiting |
+| `session.idle` | Agent finished a response, waiting for you |
 | `session.error` | Session hit an error |
-| `permission.asked` | Agent needs your input/approval |
+| `permission.asked` | Agent needs approval for a tool action |
+| `permission.replied` | Permission request answered |
+| `question.asked` | Agent is asking you a question |
+| `question.replied` | Question answered |
+| `question.rejected` | Question dismissed |
 | `todo.updated` | Task list changed |
+| `session.created` | New session started |
+| `session.deleted` | Session ended |
+| `session.compacted` | Session context compacted |
+| `session.diff` | Session diff available |
+| `session.status` | Session status changed |
+| `session.updated` | Session updated |
+| `message.updated` | New message received |
+| `command.executed` | Command executed |
+| `file.edited` | File edited |
 
 ### Webhook payload
 
-Each event POSTs a JSON payload:
+**Default (text mode) — `Content-Type: text/plain`:**
+
+```
+⏳ Session is idle and waiting for input
+opencode-webhook-notify | /home/sebby/repos/opencode-webhook-notify
+session.idle
+```
+
+Format: `emoji human-message\nprojectName | worktree\nevent-type`
+
+**Raw mode (`"raw": true`) — `Content-Type: application/json`:**
 
 ```json
 {
   "event": "session.idle",
+  "msg": "Session is idle and waiting for input",
   "timestamp": "2026-05-23T20:30:00.000Z",
-  "project": "/home/user/my-project",
-  "session": "sess_abc123..."
+  "project": "0868ffdee...",
+  "projectName": "opencode-webhook-notify",
+  "directory": "/home/sebby/repos/opencode-webhook-notify",
+  "worktree": "/home/sebby/repos/opencode-webhook-notify"
 }
 ```
 
