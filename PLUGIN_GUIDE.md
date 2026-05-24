@@ -1,6 +1,6 @@
 # OpenCode Plugin Development Guide
 
-A lightweight bootstrap for creating OpenCode plugins. For full hook/API docs, see [opencode.ai/docs/plugins](https://opencode.ai/docs/plugins/).
+A lightweight bootstrap for creating OpenCode plugins. 
 
 ## Quick Start
 
@@ -200,3 +200,108 @@ Docs for all events and signatures: [opencode.ai/docs/plugins](https://opencode.
 - **Bun shell throws on non-zero exit** — use `.nothrow()` if needed
 - **`@opencode-ai/plugin` is provided at runtime** — mark as `--external` when bundling
 - **Plugin hook execution order is undefined** — don't rely on ordering between plugins
+
+## Documentation and references
+
+- [Opencode SDK](https://opencode.ai/docs/sdk/).
+- [Opencode Plugin Docs](https://opencode.ai/docs/plugins/).
+
+## Lessons from the Field
+
+Practical discoveries while building [webhook-notify](https://github.com/anomalyco/opencode-webhook-notify).
+
+### Type-only vs value imports matter for bundle size
+
+```ts
+import type { Plugin } from "@opencode-ai/plugin"        // ✅ ~7 KB bundle
+import { type Plugin, tool } from "@opencode-ai/plugin"  // ⚠️ ~0.5 MB unless --external
+```
+
+When you import values (like `tool`), always add `--external @opencode-ai/plugin` to your build script. OpenCode provides it at runtime. Type-only imports don't need this since they're erased.
+
+### Undocumented events exist — check the source
+
+The [docs](https://opencode.ai/docs/plugins/) list official events, but the OpenCode source has more. For example, `question.asked`, `question.replied`, and `question.rejected` fire when the question tool is used — they're not in the docs but are in `packages/opencode/src/cli/cmd/run/stream.transport.ts`. Searching the [OpenCode repo](https://github.com/anomalyco/opencode) is worthwhile when you need specific events.
+
+### console.log flashes at startup, client.app.log doesn't
+
+```ts
+// ❌ Flashes on screen during OpenCode startup
+console.log("[my-plugin] Loaded")
+
+// ✅ Clean structured logging
+await client.app.log({
+  body: { service: "my-plugin", level: "info", message: "Loaded" },
+})
+```
+
+Use `console.error` only for actual failures (bad config, network errors, etc.). Startup status goes through `client.app.log`.
+
+### Custom tools = runtime state changes without restart
+
+Since plugins have no hot-reload, use a **module-level variable** + a **custom tool** to toggle behavior at runtime:
+
+```ts
+let enabled = true
+
+export const MyPlugin: Plugin = async () => {
+  return {
+    event: async ({ event }) => {
+      if (!enabled) return
+      // ...
+    },
+    tool: {
+      myplugin_toggle: tool({
+        description: "Toggle my-plugin on or off",
+        args: { enable: tool.schema.boolean() },
+        async execute(args) {
+          enabled = args.enable
+          return `Plugin ${enabled ? "enabled" : "disabled"}`
+        },
+      }),
+    },
+  }
+}
+```
+
+### project.name can be undefined
+
+The `project` context field may not have a `name`. `project.id` is always a UUID. Use `directory`'s basename as a fallback:
+
+```ts
+import { basename } from "node:path"
+const name = project.name ?? basename(directory)
+```
+
+### session.idle vs permission.asked vs question.asked
+
+| Event | Fires when |
+|-------|-----------|
+| `session.idle` | Agent stops and waits (all cases — questions, finished, etc.) |
+| `session.status` | Carries `properties.status.type`: `"idle"`, `"busy"`, `"retrying"` |
+| `permission.asked` | Tool permission dialogs only (not question tool) |
+| `question.asked` | Agent calls the question tool specifically |
+
+### event hook receives { event } with .type and .properties
+
+```ts
+event: async ({ event }) => {
+  console.log(event.type)                          // "session.idle"
+  console.log(event.properties?.sessionID)          // session UUID
+  console.log(event.properties?.status?.type)       // "idle" | "busy" (for session.status)
+}
+```
+
+### env var resolution: parse JSON first, then resolve
+
+Resolving `$VAR` patterns on the raw JSON string can corrupt the JSON if env var values contain quotes or backslashes. Always parse first, then recursively walk the object:
+
+```ts
+// ❌ resolveEnvVars(rawJson) then JSON.parse — breaks on special chars
+// ✅ JSON.parse(raw) then resolveEnvVarsInObject(parsed)
+```
+
+### GET requests should skip the body
+
+Some servers reject GET requests with a body. If your plugin supports custom HTTP methods, omit `body` for `GET`.
+
