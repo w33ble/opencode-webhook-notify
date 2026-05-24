@@ -3,6 +3,7 @@
   "name": "@w33ble/opencode-webhook-notify",
   "version": "1.0.0",
   "type": "module",
+  "license": "MPL-2.0",
   "engines": {
     "bun": ">=1.0.0"
   },
