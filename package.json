@@ -4,9 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/w33ble/opencode-webhook-notify.git"
+  },
   "engines": {
     "bun": ">=1.0.0"
   },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -17,7 +23,8 @@
     "test": "bun test",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@opencode-ai/plugin": "^1.15.10"
