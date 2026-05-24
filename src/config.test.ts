@@ -69,30 +69,46 @@ test("project config takes priority over global", () => {
 
 test("resolves $VAR_NAME env vars", () => {
   process.env.HOOK_URL = "https://hooks.example.com/abc"
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "$HOOK_URL", events: ["session.idle"] }],
-  }))
+  try {
+    const projectDir = join(tmpDir, ".opencode")
+    mkdirSync(projectDir, { recursive: true })
+    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
+      webhooks: [{ url: "$HOOK_URL", events: ["session.idle"] }],
+    }))
 
-  const config = loadConfig(tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.webhooks[0].url).toBe("https://hooks.example.com/abc")
-  delete process.env.HOOK_URL
+    const config = loadConfig(tmpDir)
+    expect(config).not.toBeNull()
+    expect(config!.webhooks[0].url).toBe("https://hooks.example.com/abc")
+  } finally {
+    delete process.env.HOOK_URL
+  }
 })
 
 test("resolves ${VAR_NAME} env vars", () => {
   process.env.TOKEN = "secret123"
+  try {
+    const projectDir = join(tmpDir, ".opencode")
+    mkdirSync(projectDir, { recursive: true })
+    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
+      webhooks: [{ url: "https://example.com/${TOKEN}/hook", events: ["session.idle"] }],
+    }))
+
+    const config = loadConfig(tmpDir)
+    expect(config).not.toBeNull()
+    expect(config!.webhooks[0].url).toBe("https://example.com/secret123/hook")
+  } finally {
+    delete process.env.TOKEN
+  }
+})
+
+test("validates empty webhooks array is valid", () => {
   const projectDir = join(tmpDir, ".opencode")
   mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://example.com/${TOKEN}/hook", events: ["session.idle"] }],
-  }))
+  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({ webhooks: [] }))
 
   const config = loadConfig(tmpDir)
   expect(config).not.toBeNull()
-  expect(config!.webhooks[0].url).toBe("https://example.com/secret123/hook")
-  delete process.env.TOKEN
+  expect(config!.webhooks).toEqual([])
 })
 
 test("returns null for invalid JSON", () => {
