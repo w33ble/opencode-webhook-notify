@@ -1,39 +1,94 @@
-# opencode-webhook-notify
+# webhook-notify
 
-An [OpenCode](https://opencode.ai) plugin that sends webhook notifications when notable events occur — agent needs your input, finishes working, hits an error, or updates todos.
+An [OpenCode](https://opencode.ai) plugin that fires webhooks when things happen — agent asks a question, needs your permission, finishes working, hits an error, or updates your task list. Multiple webhooks, each with their own event filter, HTTP method, auth headers, and payload format (emoji text or raw JSON).
+
+## Install
+
+### From npm (recommended)
+
+Add to your `opencode.json`:
+
+```json
+{
+  "plugin": ["@w33ble/opencode-webhook-notify@latest"]
+}
+```
+
+Restart OpenCode. Done.
+
+### Local (development)
+
+```bash
+bun install
+bun run build
+mkdir -p .opencode/plugins
+ln -sf $(pwd)/dist/index.js .opencode/plugins/webhook-notify.ts
+```
+
+The symlink must have a `.ts` extension even though it points to a `.js` bundle.
+
+Then restart OpenCode.
 
 ## Configuration
 
-Create a `webhook-notify.json` config file. Project-level takes priority over global:
+Create a `webhook-notify.json` config file. The plugin checks two locations, in order:
 
 - `.opencode/webhook-notify.json` — project-specific
 - `~/.config/opencode/webhook-notify.json` — global fallback
 
-No config = plugin loads silently and does nothing.
+No config file = the plugin loads silently and does nothing.
 
-Set `"enabled": false` at the top level to temporarily disable all notifications without removing the config file.
-
-Or toggle notifications at runtime without restarting — just ask your agent:
-
-> "Disable webhook notifications"
-
-The plugin registers two custom tools:
-
-- `webhook_notify_toggle` — toggle notifications on/off (`enable: true | false`)
-- `webhook_notify_status` — check current state
-
-### Format
+### Quick start
 
 ```json
 {
   "webhooks": [
     {
+      "url": "https://ntfy.sh/mytopic",
+      "events": ["session.idle", "question.asked", "permission.asked"]
+    }
+  ]
+}
+```
+
+### Disabling notifications
+
+Set `"enabled": false` at the top level to start with notifications off:
+
+```json
+{
+  "enabled": false,
+  "webhooks": [...]
+}
+```
+
+You can also toggle notifications at runtime without restarting — just ask your agent:
+
+> "Disable webhook notifications" / "Enable webhook notifications"  
+> "Are webhook notifications on?"
+
+Two custom tools are available to agents:
+
+- `webhook_notify_toggle(enable: boolean)` — turn notifications on or off
+- `webhook_notify_status()` — check whether notifications are currently enabled
+
+### Full config
+
+```json
+{
+  "enabled": true,
+  "webhooks": [
+    {
       "url": "https://hooks.slack.com/services/...",
-      "events": ["session.idle", "session.error"]
+      "events": ["session.idle", "session.error"],
+      "headers": { "Authorization": "Bearer ${SLACK_TOKEN}" },
+      "method": "POST",
+      "raw": false
     },
     {
-      "url": "https://ntfy.sh/mytopic",
-      "events": ["permission.asked", "question.asked", "todo.updated"]
+      "url": "https://api.example.com/poke",
+      "events": ["permission.asked", "question.asked"],
+      "method": "GET"
     }
   ]
 }
@@ -47,27 +102,13 @@ The plugin registers two custom tools:
 | `events` | string[] | required | Which event types trigger this webhook |
 | `headers` | object | — | Custom HTTP headers (e.g. auth tokens) |
 | `method` | string | `"POST"` | HTTP method (`GET`, `PUT`, `PATCH`, etc.) |
-| `raw` | boolean | `false` | Send structured JSON instead of formatted text |
+| `raw` | boolean | `false` | `true` = structured JSON, `false` = formatted text |
 
-**Headers** support env vars and are spread after `Content-Type`:
+Environment variables in all string values (`$VAR` / `${VAR}`) are resolved automatically — in URLs, headers, and anywhere else.
 
-```json
-{
-  "url": "https://api.example.com/hooks",
-  "events": ["session.idle"],
-  "headers": {
-    "Authorization": "Bearer ${API_TOKEN}"
-  }
-}
-```
+`GET` requests are sent without a body. `headers` are spread after the `Content-Type` header.
 
-**Method** defaults to `POST`. `GET` requests are sent without a body.
-
-**Raw mode:** When `"raw": true`, a full JSON payload is sent (see below). By default, a human-readable text message is sent instead.
-
-Environment variables in all string values (`$VAR` / `${VAR}`) are resolved automatically.
-
-### Available events
+## Available events
 
 | Event | When it fires |
 |-------|--------------|
@@ -89,19 +130,21 @@ Environment variables in all string values (`$VAR` / `${VAR}`) are resolved auto
 | `command.executed` | Command executed |
 | `file.edited` | File edited |
 
-### Webhook payload
+## Payload
 
-**Default (text mode) — `Content-Type: text/plain`:**
+### Default (text mode) — `Content-Type: text/plain`
 
 ```
 ⏳ Session is idle and waiting for input
-opencode-webhook-notify | /home/sebby/repos/opencode-webhook-notify
+opencode-webhook-notify | /home/user/repos/opencode-webhook-notify
 session.idle
 ```
 
 Format: `emoji human-message\nprojectName | worktree\nevent-type`
 
-**Raw mode (`"raw": true`) — `Content-Type: application/json`:**
+If the session title is available, it's inserted between the message and the project info line.
+
+### Raw mode (`"raw": true`) — `Content-Type: application/json`
 
 ```json
 {
@@ -110,31 +153,13 @@ Format: `emoji human-message\nprojectName | worktree\nevent-type`
   "timestamp": "2026-05-23T20:30:00.000Z",
   "project": "0868ffdee...",
   "projectName": "opencode-webhook-notify",
-  "directory": "/home/sebby/repos/opencode-webhook-notify",
-  "worktree": "/home/sebby/repos/opencode-webhook-notify"
+  "sessionTitle": "My Session",
+  "directory": "/home/user/repos/opencode-webhook-notify",
+  "worktree": "/home/user/repos/opencode-webhook-notify"
 }
-```
-
-## Install
-
-### Local (development)
-
-```bash
-bun install
-bun run build
-mkdir -p .opencode/plugins
-ln -sf $(pwd)/dist/webhook-notify.js .opencode/plugins/webhook-notify.ts
-```
-
-Restart OpenCode. Create a config file and you're done.
-
-### From npm (coming soon)
-
-```bash
-opencode plugin install webhook-notify
 ```
 
 ## Requirements
 
-- [Bun](https://bun.sh) >= 1.0.0
 - [OpenCode](https://opencode.ai)
+- [Bun](https://bun.sh) >= 1.0.0 (development only — npm installs work without Bun)

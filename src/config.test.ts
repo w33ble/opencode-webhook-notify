@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 test('returns null when no config file exists', () => {
-  expect(loadConfig(tmpDir)).toBeNull();
+  expect(loadConfig(tmpDir, tmpDir)).toBeNull();
 });
 
 test('loads valid config from project-level .opencode/webhook-notify.json', () => {

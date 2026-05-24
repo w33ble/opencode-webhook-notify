@@ -41,6 +41,12 @@ ln -sf $(pwd)/dist/index.js .opencode/plugins/webhook-notify.ts
 
 The symlink **must** have a `.ts` extension even though it points to a `.js` bundle. OpenCode's plugin loader looks for `.ts` or `.js` files.
 
+Published as `@w33ble/opencode-webhook-notify` on npm. Users install by adding to `opencode.json`:
+
+```json
+{ "plugin": ["@w33ble/opencode-webhook-notify@latest"] }
+```
+
 Then restart OpenCode.
 
 ## Architecture
