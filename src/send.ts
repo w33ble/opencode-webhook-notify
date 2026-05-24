@@ -2,11 +2,12 @@ export async function sendWebhook(
   url: string,
   payload: Record<string, unknown>,
   _fetch: typeof fetch = globalThis.fetch.bind(globalThis),
+  headers?: Record<string, string>,
 ): Promise<void> {
   try {
     const response = await _fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(payload),
     })
     if (!response.ok) {

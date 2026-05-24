@@ -164,6 +164,27 @@ test("returns null when webhook missing url", () => {
   expect(loadConfig(tmpDir)).toBeNull()
 })
 
+test("resolves env vars in headers", () => {
+  process.env.API_TOKEN = "secret456"
+  try {
+    const projectDir = join(tmpDir, ".opencode")
+    mkdirSync(projectDir, { recursive: true })
+    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
+      webhooks: [{
+        url: "https://example.com",
+        events: ["session.idle"],
+        headers: { "Authorization": "Bearer $API_TOKEN" },
+      }],
+    }))
+
+    const config = loadConfig(tmpDir, tmpDir)
+    expect(config).not.toBeNull()
+    expect(config!.webhooks[0].headers).toEqual({ "Authorization": "Bearer secret456" })
+  } finally {
+    delete process.env.API_TOKEN
+  }
+})
+
 test("returns null when webhook missing events", () => {
   const projectDir = join(tmpDir, ".opencode")
   mkdirSync(projectDir, { recursive: true })

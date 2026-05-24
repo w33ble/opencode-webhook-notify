@@ -27,6 +27,15 @@ test("does not throw on fetch failure", async () => {
   await sendWebhook("https://bad.example.com", {}, fetchMock)
 })
 
+test("includes custom headers when provided", async () => {
+  const fetchMock = mock((url: string, init: RequestInit) => {
+    expect(init.headers).toEqual({ "Content-Type": "application/json", "Authorization": "Bearer test123" })
+    return Promise.resolve(new Response(null, { status: 200 }))
+  })
+
+  await sendWebhook("https://example.com", { event: "test" }, fetchMock, { "Authorization": "Bearer test123" })
+})
+
 test("logs error on non-2xx response", async () => {
   const fetchMock = mock(() =>
     Promise.resolve(new Response("not found", { status: 404 }))

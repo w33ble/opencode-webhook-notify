@@ -28,6 +28,22 @@ No config = plugin loads silently and does nothing.
 }
 ```
 
+Custom headers (e.g. for API keys or bearer tokens) can be set per webhook:
+
+```json
+{
+  "webhooks": [
+    {
+      "url": "https://api.example.com/hooks",
+      "events": ["session.idle"],
+      "headers": {
+        "Authorization": "Bearer ${API_TOKEN}"
+      }
+    }
+  ]
+}
+```
+
 Environment variables in string values are resolved automatically:
 
 ```json

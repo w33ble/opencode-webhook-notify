@@ -5,6 +5,7 @@ import { homedir } from "node:os"
 export interface WebhookConfig {
   url: string
   events: string[]
+  headers?: Record<string, string>
 }
 
 export interface Config {
