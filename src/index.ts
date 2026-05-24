@@ -97,7 +97,7 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
       if (matching.length === 0) return;
 
       const msg = messages[event.type] ?? `Event: ${event.type}`;
-      const emote = emotes[event.type] ?? 'ℹ️';
+      const emote = emotes[event.type] ?? '';
 
       // Fetch session title (cached per session ID)
       const sessionID = (event.properties as Record<string, unknown> | undefined)?.sessionID as
