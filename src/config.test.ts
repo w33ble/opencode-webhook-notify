@@ -1,245 +1,292 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test"
-import { writeFileSync, mkdirSync, rmSync } from "node:fs"
-import { join } from "node:path"
-import { tmpdir } from "node:os"
-import { loadConfig } from "./config"
+import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { loadConfig } from './config';
 
-let tmpDir: string
+let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = join(tmpdir(), `webhook-notify-test-${Date.now()}`)
-  mkdirSync(tmpDir, { recursive: true })
-})
+  tmpDir = join(tmpdir(), `webhook-notify-test-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+});
 
 afterEach(() => {
-  rmSync(tmpDir, { recursive: true, force: true })
-})
+  rmSync(tmpDir, { recursive: true, force: true });
+});
 
-test("returns null when no config file exists", () => {
-  expect(loadConfig(tmpDir)).toBeNull()
-})
+test('returns null when no config file exists', () => {
+  expect(loadConfig(tmpDir)).toBeNull();
+});
 
-test("loads valid config from project-level .opencode/webhook-notify.json", () => {
-  const configDir = join(tmpDir, ".opencode")
-  mkdirSync(configDir, { recursive: true })
-  writeFileSync(join(configDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [
-      { url: "https://hooks.slack.com/test", events: ["session.idle", "session.error"] },
-      { url: "https://ntfy.sh/test", events: ["permission.asked"] },
-    ],
-  }))
+test('loads valid config from project-level .opencode/webhook-notify.json', () => {
+  const configDir = join(tmpDir, '.opencode');
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(
+    join(configDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [
+        { url: 'https://hooks.slack.com/test', events: ['session.idle', 'session.error'] },
+        { url: 'https://ntfy.sh/test', events: ['permission.asked'] },
+      ],
+    })
+  );
 
-  const config = loadConfig(tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.webhooks.length).toBe(2)
-  expect(config!.webhooks[0].url).toBe("https://hooks.slack.com/test")
-  expect(config!.webhooks[0].events).toEqual(["session.idle", "session.error"])
-  expect(config!.webhooks[1].url).toBe("https://ntfy.sh/test")
-  expect(config!.webhooks[1].events).toEqual(["permission.asked"])
-})
+  const config = loadConfig(tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.webhooks.length).toBe(2);
+  expect(config!.webhooks[0].url).toBe('https://hooks.slack.com/test');
+  expect(config!.webhooks[0].events).toEqual(['session.idle', 'session.error']);
+  expect(config!.webhooks[1].url).toBe('https://ntfy.sh/test');
+  expect(config!.webhooks[1].events).toEqual(['permission.asked']);
+});
 
-test("falls back to global config when project config missing", () => {
-  const globalDir = join(tmpDir, ".config", "opencode")
-  mkdirSync(globalDir, { recursive: true })
-  writeFileSync(join(globalDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://global.example.com", events: ["session.idle"] }],
-  }))
+test('falls back to global config when project config missing', () => {
+  const globalDir = join(tmpDir, '.config', 'opencode');
+  mkdirSync(globalDir, { recursive: true });
+  writeFileSync(
+    join(globalDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://global.example.com', events: ['session.idle'] }],
+    })
+  );
 
-  const config = loadConfig(tmpDir, tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.webhooks[0].url).toBe("https://global.example.com")
-})
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.webhooks[0].url).toBe('https://global.example.com');
+});
 
-test("project config takes priority over global", () => {
-  const globalDir = join(tmpDir, ".config", "opencode")
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(globalDir, { recursive: true })
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(globalDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://global.example.com", events: ["session.idle"] }],
-  }))
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://project.example.com", events: ["todo.updated"] }],
-  }))
+test('project config takes priority over global', () => {
+  const globalDir = join(tmpDir, '.config', 'opencode');
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(globalDir, { recursive: true });
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(globalDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://global.example.com', events: ['session.idle'] }],
+    })
+  );
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://project.example.com', events: ['todo.updated'] }],
+    })
+  );
 
-  const config = loadConfig(tmpDir, tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.webhooks[0].url).toBe("https://project.example.com")
-})
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.webhooks[0].url).toBe('https://project.example.com');
+});
 
-test("resolves $VAR_NAME env vars", () => {
-  process.env.HOOK_URL = "https://hooks.example.com/abc"
+test('resolves $VAR_NAME env vars', () => {
+  process.env.HOOK_URL = 'https://hooks.example.com/abc';
   try {
-    const projectDir = join(tmpDir, ".opencode")
-    mkdirSync(projectDir, { recursive: true })
-    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-      webhooks: [{ url: "$HOOK_URL", events: ["session.idle"] }],
-    }))
+    const projectDir = join(tmpDir, '.opencode');
+    mkdirSync(projectDir, { recursive: true });
+    writeFileSync(
+      join(projectDir, 'webhook-notify.json'),
+      JSON.stringify({
+        webhooks: [{ url: '$HOOK_URL', events: ['session.idle'] }],
+      })
+    );
 
-    const config = loadConfig(tmpDir)
-    expect(config).not.toBeNull()
-    expect(config!.webhooks[0].url).toBe("https://hooks.example.com/abc")
+    const config = loadConfig(tmpDir);
+    expect(config).not.toBeNull();
+    expect(config!.webhooks[0].url).toBe('https://hooks.example.com/abc');
   } finally {
-    delete process.env.HOOK_URL
+    delete process.env.HOOK_URL;
   }
-})
+});
 
-test("resolves ${VAR_NAME} env vars", () => {
-  process.env.TOKEN = "secret123"
+test('resolves $' + '{VAR_NAME} env vars', () => {
+  process.env.TOKEN = 'secret123';
   try {
-    const projectDir = join(tmpDir, ".opencode")
-    mkdirSync(projectDir, { recursive: true })
-    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-      webhooks: [{ url: "https://example.com/${TOKEN}/hook", events: ["session.idle"] }],
-    }))
+    const projectDir = join(tmpDir, '.opencode');
+    mkdirSync(projectDir, { recursive: true });
+    writeFileSync(
+      join(projectDir, 'webhook-notify.json'),
+      JSON.stringify({
+        webhooks: [{ url: 'https://example.com/$' + '{TOKEN}/hook', events: ['session.idle'] }],
+      })
+    );
 
-    const config = loadConfig(tmpDir)
-    expect(config).not.toBeNull()
-    expect(config!.webhooks[0].url).toBe("https://example.com/secret123/hook")
+    const config = loadConfig(tmpDir);
+    expect(config).not.toBeNull();
+    expect(config!.webhooks[0].url).toBe('https://example.com/secret123/hook');
   } finally {
-    delete process.env.TOKEN
+    delete process.env.TOKEN;
   }
-})
+});
 
-test("resolves env var containing double quotes in url", () => {
-  process.env.MSG = 'say "hello"'
+test('resolves env var containing double quotes in url', () => {
+  process.env.MSG = 'say "hello"';
   try {
-    const projectDir = join(tmpDir, ".opencode")
-    mkdirSync(projectDir, { recursive: true })
-    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-      webhooks: [{ url: "$MSG", events: ["session.idle"] }],
-    }))
+    const projectDir = join(tmpDir, '.opencode');
+    mkdirSync(projectDir, { recursive: true });
+    writeFileSync(
+      join(projectDir, 'webhook-notify.json'),
+      JSON.stringify({
+        webhooks: [{ url: '$MSG', events: ['session.idle'] }],
+      })
+    );
 
-    const config = loadConfig(tmpDir)
-    expect(config).not.toBeNull()
-    expect(config!.webhooks[0].url).toBe('say "hello"')
+    const config = loadConfig(tmpDir);
+    expect(config).not.toBeNull();
+    expect(config!.webhooks[0].url).toBe('say "hello"');
   } finally {
-    delete process.env.MSG
+    delete process.env.MSG;
   }
-})
+});
 
-test("rejects webhook with empty events array", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://example.com", events: [] }],
-  }))
+test('rejects webhook with empty events array', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://example.com', events: [] }],
+    })
+  );
 
-  expect(loadConfig(tmpDir)).toBeNull()
-})
+  expect(loadConfig(tmpDir)).toBeNull();
+});
 
-test("validates empty top-level webhooks array is valid", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({ webhooks: [] }))
+test('validates empty top-level webhooks array is valid', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(join(projectDir, 'webhook-notify.json'), JSON.stringify({ webhooks: [] }));
 
-  const config = loadConfig(tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.webhooks).toEqual([])
-})
+  const config = loadConfig(tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.webhooks).toEqual([]);
+});
 
-test("returns null for invalid JSON", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), "not valid json{{{")
+test('returns null for invalid JSON', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(join(projectDir, 'webhook-notify.json'), 'not valid json{{{');
 
-  expect(loadConfig(tmpDir)).toBeNull()
-})
+  expect(loadConfig(tmpDir)).toBeNull();
+});
 
-test("returns null when webhooks is not an array", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({ webhooks: "bad" }))
+test('returns null when webhooks is not an array', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(join(projectDir, 'webhook-notify.json'), JSON.stringify({ webhooks: 'bad' }));
 
-  expect(loadConfig(tmpDir)).toBeNull()
-})
+  expect(loadConfig(tmpDir)).toBeNull();
+});
 
-test("returns null when webhook missing url", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ events: ["session.idle"] }],
-  }))
+test('returns null when webhook missing url', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ events: ['session.idle'] }],
+    })
+  );
 
-  expect(loadConfig(tmpDir)).toBeNull()
-})
+  expect(loadConfig(tmpDir)).toBeNull();
+});
 
-test("resolves env vars in headers", () => {
-  process.env.API_TOKEN = "secret456"
+test('resolves env vars in headers', () => {
+  process.env.API_TOKEN = 'secret456';
   try {
-    const projectDir = join(tmpDir, ".opencode")
-    mkdirSync(projectDir, { recursive: true })
-    writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-      webhooks: [{
-        url: "https://example.com",
-        events: ["session.idle"],
-        headers: { "Authorization": "Bearer $API_TOKEN" },
-      }],
-    }))
+    const projectDir = join(tmpDir, '.opencode');
+    mkdirSync(projectDir, { recursive: true });
+    writeFileSync(
+      join(projectDir, 'webhook-notify.json'),
+      JSON.stringify({
+        webhooks: [
+          {
+            url: 'https://example.com',
+            events: ['session.idle'],
+            headers: { Authorization: 'Bearer $API_TOKEN' },
+          },
+        ],
+      })
+    );
 
-    const config = loadConfig(tmpDir, tmpDir)
-    expect(config).not.toBeNull()
-    expect(config!.webhooks[0].headers).toEqual({ "Authorization": "Bearer secret456" })
+    const config = loadConfig(tmpDir, tmpDir);
+    expect(config).not.toBeNull();
+    expect(config!.webhooks[0].headers).toEqual({ Authorization: 'Bearer secret456' });
   } finally {
-    delete process.env.API_TOKEN
+    delete process.env.API_TOKEN;
   }
-})
+});
 
-test("reads custom method from config", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://example.com", events: ["session.idle"], method: "PUT" }],
-  }))
+test('reads custom method from config', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://example.com', events: ['session.idle'], method: 'PUT' }],
+    })
+  );
 
-  const config = loadConfig(tmpDir, tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.webhooks[0].method).toBe("PUT")
-})
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.webhooks[0].method).toBe('PUT');
+});
 
-test("returns null when webhook missing events", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://example.com" }],
-  }))
+test('returns null when webhook missing events', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://example.com' }],
+    })
+  );
 
-  expect(loadConfig(tmpDir)).toBeNull()
-})
+  expect(loadConfig(tmpDir)).toBeNull();
+});
 
-test("reads raw flag from config", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://example.com", events: ["session.idle"], raw: true }],
-  }))
+test('reads raw flag from config', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://example.com', events: ['session.idle'], raw: true }],
+    })
+  );
 
-  const config = loadConfig(tmpDir, tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.webhooks[0].raw).toBe(true)
-})
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.webhooks[0].raw).toBe(true);
+});
 
-test("reads enabled flag from config", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    enabled: false,
-    webhooks: [{ url: "https://example.com", events: ["session.idle"] }],
-  }))
+test('reads enabled flag from config', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      enabled: false,
+      webhooks: [{ url: 'https://example.com', events: ['session.idle'] }],
+    })
+  );
 
-  const config = loadConfig(tmpDir, tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.enabled).toBe(false)
-})
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.enabled).toBe(false);
+});
 
-test("enabled defaults to undefined when not set", () => {
-  const projectDir = join(tmpDir, ".opencode")
-  mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, "webhook-notify.json"), JSON.stringify({
-    webhooks: [{ url: "https://example.com", events: ["session.idle"] }],
-  }))
+test('enabled defaults to undefined when not set', () => {
+  const projectDir = join(tmpDir, '.opencode');
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, 'webhook-notify.json'),
+    JSON.stringify({
+      webhooks: [{ url: 'https://example.com', events: ['session.idle'] }],
+    })
+  );
 
-  const config = loadConfig(tmpDir, tmpDir)
-  expect(config).not.toBeNull()
-  expect(config!.enabled).toBeUndefined()
-})
+  const config = loadConfig(tmpDir, tmpDir);
+  expect(config).not.toBeNull();
+  expect(config!.enabled).toBeUndefined();
+});

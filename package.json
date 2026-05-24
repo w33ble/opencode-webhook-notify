@@ -7,13 +7,19 @@
     "bun": ">=1.0.0"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outfile dist/webhook-notify.js --target=bun --format esm --external @opencode-ai/plugin",
-    "test": "bun test"
+    "build": "bun run build:bundle && bun run build:types",
+    "build:bundle": "bun build src/index.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin",
+    "build:types": "tsc --project tsconfig.build.json",
+    "test": "bun test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@opencode-ai/plugin": "^1.15.10"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@types/bun": "latest",
     "typescript": "latest"
   }

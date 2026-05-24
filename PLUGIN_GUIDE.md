@@ -73,21 +73,53 @@ export const MyPlugin: Plugin = async ({ project, client, $, directory, worktree
 
 ### 1. Build
 
+The build runs in two steps — bundler for JavaScript, TypeScript compiler for type declarations:
+
 ```bash
-bun build src/index.ts --outfile dist/plugin.js --target=bun --format esm --external @opencode-ai/plugin
+# Both steps
+bun run build
+
+# Or individually
+bun run build:bundle   # bun build -> dist/index.js
+bun run build:types    # tsc       -> dist/index.d.ts
 ```
 
-### 2. Symlink
+Under the hood:
+```bash
+bun build src/index.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin
+tsc --project tsconfig.build.json
+```
+
+Types are emitted separately via a `tsconfig.build.json` that extends the base config with `declaration: true` + `emitDeclarationOnly: true`. The `dist/` output includes both the JS bundle and `.d.ts` declarations.
+
+### 2. Lint & Format
+
+Using [Biome](https://biomejs.dev/) for fast, zero-config linting and formatting:
+
+```bash
+# Check for issues
+bun run lint
+
+# Auto-fix lint + formatting
+bun run lint:fix
+
+# Format only
+bun run format
+```
+
+Biome config (`biome.json`) enables recommended lint rules, single quotes, 2-space indent, and auto-organized imports. The `dist/` directory is excluded.
+
+### 3. Symlink
 
 ```bash
 # Project-level
-ln -sf $(pwd)/dist/plugin.js .opencode/plugins/my-plugin.ts
+ln -sf $(pwd)/dist/index.js .opencode/plugins/my-plugin.ts
 
 # Or Globally
-ln -sf $(pwd)/dist/plugin.js ~/.config/opencode/plugins/my-plugin.ts
+ln -sf $(pwd)/dist/index.js ~/.config/opencode/plugins/my-plugin.ts
 ```
 
-### 3. Verify
+### 4. Verify
 
 Restart OpenCode and check it loaded:
 
@@ -95,7 +127,7 @@ Restart OpenCode and check it loaded:
 opencode --verbose 2>&1 | grep -i plugin
 ```
 
-### 4. Iterate
+### 5. Iterate
 
 **No hot-reload** — every change requires rebuilding and restarting OpenCode.
 
@@ -235,7 +267,7 @@ Docs for all events and signatures: [opencode.ai/docs/plugins](https://opencode.
 
 ## Lessons from the Field
 
-Practical discoveries while building [webhook-notify](https://github.com/anomalyco/opencode-webhook-notify).
+Practical discoveries while building plugins.
 
 ### Type-only vs value imports matter for bundle size
 
