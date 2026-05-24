@@ -4,6 +4,7 @@ import { loadConfig } from './config';
 import { sendWebhook } from './send';
 
 let webhooksEnabled = true;
+const sessionTitleCache = new Map<string, string>();
 
 export const WebhookNotify: Plugin = async ({ project, client, directory, worktree }) => {
   const config = loadConfig();
@@ -98,6 +99,24 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
       const msg = messages[event.type] ?? `Event: ${event.type}`;
       const emote = emotes[event.type] ?? 'ℹ️';
 
+      // Fetch session title (cached per session ID)
+      const sessionID = (event.properties as Record<string, unknown> | undefined)?.sessionID as
+        | string
+        | undefined;
+      let sessionTitle: string | undefined;
+      if (sessionID) {
+        sessionTitle = sessionTitleCache.get(sessionID);
+        if (!sessionTitle && !sessionTitleCache.has(sessionID)) {
+          try {
+            const result = await client.session.get({ path: { id: sessionID } });
+            sessionTitle = (result.data as { title?: string } | undefined)?.title;
+          } catch {
+            // non-fatal: session might not exist or be inaccessible
+          }
+          sessionTitleCache.set(sessionID, sessionTitle ?? '');
+        }
+      }
+
       await Promise.allSettled(
         matching.map((w) => {
           const payload = w.raw
@@ -109,8 +128,11 @@ export const WebhookNotify: Plugin = async ({ project, client, directory, worktr
                 directory,
                 worktree,
                 msg,
+                sessionTitle,
               }
-            : `${emote} ${msg}\n${projectName} | ${worktree}\n${event.type}`;
+            : [`${emote} ${msg}`, sessionTitle, `${projectName} | ${worktree}`, event.type]
+                .filter(Boolean)
+                .join('\n');
 
           return sendWebhook(w.url, payload, undefined, w.headers, w.method ?? 'POST');
         })
